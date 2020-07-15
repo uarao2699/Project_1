@@ -1,0 +1,26 @@
+node{
+   def tomcatIp = '18.222.12.146'
+   def tomcatUser = 'ec2-user'
+   def stopTomcat = "ssh ${tomcatUser}@${tomcatIp} /opt/tomcat8/bin/shutdown.sh"
+   def startTomcat = "ssh ${tomcatUser}@${tomcatIp} /opt/tomcat8/bin/startup.sh"
+   def copyWar = "scp -o StrictHostKeyChecking=no target/myweb.war ${tomcatUser}@${tomcatIp}:/opt/tomcat8/webapps/"
+   stage('SCM Checkout'){
+        git branch: 'master', 
+	        credentialsId: 'uarao2699',
+	        url: 'https://github.com/uarao2699/JenkinsProject'
+   }
+   stage('Maven Build'){
+        def mvnHome = tool name: 'maven3', type: 'maven'
+		sh "${mvnHome}/bin/mvn clean package"
+   }
+   
+   stage('Deploy Dev'){
+	   sh 'mv target/myweb*.war target/myweb.war' 
+	   
+       sshagent(['tomcat-dev']) {
+			sh "${stopTomcat}"
+			sh "${copyWar}"
+			sh "${startTomcat}"
+	   }
+   }
+}
